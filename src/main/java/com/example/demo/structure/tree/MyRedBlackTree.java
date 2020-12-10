@@ -12,7 +12,7 @@ import java.util.Comparator;
  *                      2、根节点和所有叶子节点是黑色（叶子是NIL节点，即叶子节点不存储数据）
  *                      3、每个红色节点的两个子节点都是黑色。（从每个叶子到根的所有路径上不能有两个连续的红色节点）
  *                      4、任一节点到其每个叶子的所有路径都包含相同数目的黑色节点
- * @Author zk   (改编自treeMap)
+ * @Author zk   (改编自TreeMap)
  * @Date 2020/12/9
  **/
 public class MyRedBlackTree<K,V> {
@@ -114,6 +114,26 @@ public class MyRedBlackTree<K,V> {
      * ************************************************************************
      *
      * =============================== 平衡操作 ===============================
+     * 插入时变换操作（新插入的节点颜色都是红色）：
+     *         1、变颜色
+     *            父亲和叔叔都是红色时
+     *            把父亲和叔叔变为黑色，爷爷变成红色
+     *            把爷爷设置为接下来要操作的节点
+     *
+     *         2、当父亲节点在左子树时
+     *         2.1、左旋
+     *            父亲是红色，叔叔是黑色，且当前节点在右子树，则以父亲节点进行左旋
+     *         2.2、右旋
+     *            父亲是红色，叔叔是黑色，且当且节点在左子树，则以爷爷节点进行右旋
+     *            父亲变成黑色，爷爷变成红色
+     *
+     *         3、当父亲节点在右子树时
+     *         3.1、右旋
+     *            父亲是红色，叔叔是黑色，且当且节点在左子树，则以父亲节点进行右旋
+     *         3.2、左旋
+     *            父亲是红色，叔叔是黑色，且当前节点在右子树，则以爷爷节点进行左旋
+     *            父亲变成黑色，爷爷变成红色
+     *
      *
      * ************************************************************************
      */
@@ -142,7 +162,7 @@ public class MyRedBlackTree<K,V> {
     /**
      * 左旋
      *
-     * 改编自HashMap中的红黑树
+     * @param p  p节点是 两个红色父子节点中的 父节点
      */
     private void rotateLeft(TreeNode<K,V> p) {
         if (p != null) {
@@ -165,8 +185,7 @@ public class MyRedBlackTree<K,V> {
     /**
      * 右旋
      *
-     * 改编自HashMap中的红黑树
-     * @param p
+     * @param p    p节点是 两个红色父子节点中的 父节点
      */
     private void rotateRight(TreeNode<K,V> p) {
         if (p != null) {
@@ -288,37 +307,59 @@ public class MyRedBlackTree<K,V> {
     private void fixAfterInsertion(TreeNode<K,V> x) {
         x.color = TreeNode.RED;
 
+        //父子节点都是红色，满足变换条件
         while (x != null && x != root && x.parent.color == TreeNode.RED) {
+            //父亲节点在左子树
             if (parentOf(x) == leftOf(parentOf(parentOf(x)))) {
+                //y是叔叔节点
                 TreeNode<K,V> y = rightOf(parentOf(parentOf(x)));
+                //当父亲和叔叔都是红色的时候满足变色条件，
+                //把父亲和叔叔变为黑色，爷爷变成红色
+                //把爷爷设置为接下来要操作的节点
                 if (colorOf(y) == TreeNode.RED) {
                     setColor(parentOf(x), TreeNode.BLACK);
                     setColor(y, TreeNode.BLACK);
                     setColor(parentOf(parentOf(x)), TreeNode.RED);
                     x = parentOf(parentOf(x));
-                } else {
+                }
+                //父亲是红色节点，而叔叔是黑色节点
+                else {
+                    //当前操作节点在右子树，则以父节点为操作节点进行左旋
                     if (x == rightOf(parentOf(x))) {
                         x = parentOf(x);
                         rotateLeft(x);
                     }
+
+                    //左旋之后，满足右旋条件，进行右旋
                     setColor(parentOf(x), TreeNode.BLACK);
                     setColor(parentOf(parentOf(x)), TreeNode.RED);
                     rotateRight(parentOf(parentOf(x)));
                 }
-            } else {
+            }
+            //父亲节点在右子树
+            else {
+                //y是叔叔节点
                 TreeNode<K,V> y = leftOf(parentOf(parentOf(x)));
+                //当父亲和叔叔都是红色的时候满足变色条件，
+                //把父亲和叔叔变为黑色，爷爷变成红色
+                //把爷爷设置为接下来要操作的节点
                 if (colorOf(y) == TreeNode.RED) {
                     setColor(parentOf(x), TreeNode.BLACK);
                     setColor(y, TreeNode.BLACK);
                     setColor(parentOf(parentOf(x)), TreeNode.RED);
                     x = parentOf(parentOf(x));
-                } else {
+                }
+                //父亲是红色节点，而叔叔是黑色节点
+                else {
+                    //当前操作节点在左子树，则以父节点为操作节点进行右旋
                     if (x == leftOf(parentOf(x))) {
                         x = parentOf(x);
                         rotateRight(x);
                     }
+                    //右旋变色，父节点变成黑色，爷爷节点变成红色
                     setColor(parentOf(x), TreeNode.BLACK);
                     setColor(parentOf(parentOf(x)), TreeNode.RED);
+                    //以爷爷为操作节点进行左旋
                     rotateLeft(parentOf(parentOf(x)));
                 }
             }
@@ -485,17 +526,20 @@ public class MyRedBlackTree<K,V> {
     }
 
     public static void main(String[] args) {
-        MyRedBlackTree<Integer,String> myRedBlackTree = new MyRedBlackTree<Integer,String>(5,"d");
-        myRedBlackTree.put(1,"a");
-        myRedBlackTree.put(2,"b");
-        myRedBlackTree.put(3,"c");
-        myRedBlackTree.put(4,"e");
-        myRedBlackTree.put(7,"f");
+        MyRedBlackTree<Integer,String> myRedBlackTree = new MyRedBlackTree<Integer,String>(12,"d");
+        myRedBlackTree.put(5,"a");
+        myRedBlackTree.put(19,"b");
+        myRedBlackTree.put(1,"c");
+        myRedBlackTree.put(7,"e");
+        myRedBlackTree.put(13,"f");
+        myRedBlackTree.put(30,"f");
+        myRedBlackTree.put(6,"f");
+        myRedBlackTree.put(35,"f");
 
         myRedBlackTree.in(myRedBlackTree.root);
 
-        System.out.println("删除一个节点：");
+        /*System.out.println("删除一个节点：");
         myRedBlackTree.remove(4);
-        myRedBlackTree.in(myRedBlackTree.root);
+        myRedBlackTree.in(myRedBlackTree.root);*/
     }
 }
